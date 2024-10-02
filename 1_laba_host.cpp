@@ -31,9 +31,9 @@ int main(int argc, char** argv) {
     auto start_host = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < N; ++i) 
         h_c[i] = sin(h_a[i])*sin(h_a[i]) + cos(h_b[i])*cos(h_b[i]);
-    for (int i = 0; i < 10; ++i)
-        std::cout << h_c[i] << " ";
-    std::cout << std::endl;
+//    for (int i = 0; i < 10; ++i)
+//        std::cout << h_c[i] << " ";
+//    std::cout << std::endl;
     auto end_host = std::chrono::high_resolution_clock::now();
     double t_host = std::chrono::duration<double, std::milli>(end_host - start_host).count();
     

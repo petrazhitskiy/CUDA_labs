@@ -48,7 +48,6 @@ int main(int argc, char** argv) {
     CHECK_CUDA_ERROR(cudaMemset(d_a, 0, N * sizeof(double)));
 
     cudaEvent_t t1, t2;
-    float time;
     CHECK_CUDA_ERROR(cudaEventCreate(&t1));
     CHECK_CUDA_ERROR(cudaEventCreate(&t2));
 
