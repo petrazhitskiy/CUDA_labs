@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
     }
     CHECK_CUDA_ERROR(cudaEventRecord(copy_stop));
     int threads = 128;
-    int blocks = (segmentSize + threads - 1) / threads;
+    int blocks = segmentSize / threads + 1;
     CHECK_CUDA_ERROR(cudaEventRecord(t1));
     for (int i = 0; i < numStreams; ++i) {
         sumvec_d<<<blocks, threads, 0, streams[i]>>>(d_a + i * segmentSize, d_b + i * segmentSize, d_c + i * segmentSize, segmentSize);
@@ -89,8 +89,14 @@ int main(int argc, char** argv) {
     }
     float t_kernel = 0, t_copy = 0;
     CHECK_CUDA_ERROR(cudaEventElapsedTime(&t_kernel, t1, t2));  
-    CHECK_CUDA_ERROR(cudaEventElapsedTime(&t_copy, copy_start, copy_stop)); 
-
+    // CHECK_CUDA_ERROR(cudaEventElapsedTime(&t_copy, copy_start, copy_stop)); 
+    // for (int i = 0 ; i < N;++i){
+    //     std::cout << h_c[i];
+    //     if (h_c[i] - 1.0 > 0.000000000001){
+    //         std::cout << "error" << std::endl;
+    //         break;
+    //     }
+    // }
     std::cout << "t_kernel: " << t_kernel << " ms" << std::endl;
     std::cout << "t_copy: " << t_copy << " ms" << std::endl;
 
@@ -105,5 +111,6 @@ int main(int argc, char** argv) {
         CHECK_CUDA_ERROR(cudaStreamDestroy(streams[i]));
     }
 
+    
     return 0;
 }

@@ -61,18 +61,19 @@ int main(int argc, char** argv) {
     CHECK_CUDA_ERROR(cudaEventRecord(copy_stop));
 
     int threads = 128;
-    int blocks = (N + threads - 1) / threads;
+    int blocks = N / threads + 1;
     CHECK_CUDA_ERROR(cudaEventRecord(t1));
     sumvec_d<<<blocks, threads>>>(d_a, d_b, d_c, N);
+    CHECK_CUDA_ERROR(cudaMemcpy(h_c, d_c, N * sizeof(double), cudaMemcpyDeviceToHost));
     CHECK_CUDA_ERROR(cudaEventRecord(t2));
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
     float t_kernel = 0, t_copy = 0;
     CHECK_CUDA_ERROR(cudaEventElapsedTime(&t_kernel, t1, t2));  
     CHECK_CUDA_ERROR(cudaEventElapsedTime(&t_copy, copy_start, copy_stop)); 
-
     std::cout << "t_kernel: " << t_kernel << " ms" << std::endl;
     std::cout << "t_copy: " << t_copy << " ms" << std::endl;
+
 
     free(h_a);
     free(h_b);
