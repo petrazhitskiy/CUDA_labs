@@ -42,9 +42,9 @@ int main(int argc, char** argv) {
     double *h_a, *h_b, *h_c;
     double *d_a, *d_b, *d_c;
 
-    h_a = (double*)malloc(N*sizeof(double));
-    h_b = (double*)malloc(N*sizeof(double));
-    h_c = (double*)malloc(N*sizeof(double));
+    CHECK_CUDA_ERROR(cudaMallocHost(h_a,N*sizeof(double)));
+    CHECK_CUDA_ERROR(cudaMallocHost(h_b,N*sizeof(double)));
+    CHECK_CUDA_ERROR(cudaMallocHost(h_c,N*sizeof(double)));
 
     memset(h_c, 0, N);
     for (int i = 0; i < N; ++i) {
@@ -55,50 +55,39 @@ int main(int argc, char** argv) {
     CHECK_CUDA_ERROR(cudaMalloc((void**)&d_a, N * sizeof(double)));
     CHECK_CUDA_ERROR(cudaMalloc((void**)&d_b, N * sizeof(double)));
     CHECK_CUDA_ERROR(cudaMalloc((void**)&d_c, N * sizeof(double)));
-    CHECK_CUDA_ERROR(cudaMemset(d_a, 0, N * sizeof(double)));
 
-    cudaStream_t streams[numStreams];
+    CHECK_CUDA_ERROR(cudaMemset(d_a, 0, N * sizeof(double)));
+    //измеряем все время работы 
+    cudaEvent_t t1, t2;
+    CHECK_CUDA_ERROR(cudaEventCreate(&t1));
+    CHECK_CUDA_ERROR(cudaEventCreate(&t2));
+    CHECK_CUDA_ERROR(cudaEventRecord(t1));
+    
+    cudaStream_t* streams;
+    CHECK_CUDA_ERROR(cudaMallocHost(streams,numStreams*sizeof(cudaStream_t)));
+    
     for (int i = 0; i < numStreams; ++i) {
-        CHECK_CUDA_ERROR(cudaStreamCreate(&streams[i]));
+        CHECK_CUDA_ERROR(cudaStreamCreate(&streams[i]));cudahostmalooc
     }
 
     int segmentSize = N / numStreams;
 
-    cudaEvent_t t1, t2;
-    CHECK_CUDA_ERROR(cudaEventCreate(&t1));
-    CHECK_CUDA_ERROR(cudaEventCreate(&t2));
-    cudaEvent_t copy_start, copy_stop;
-    CHECK_CUDA_ERROR(cudaEventCreate(&copy_start));
-    CHECK_CUDA_ERROR(cudaEventCreate(&copy_stop));
-    CHECK_CUDA_ERROR(cudaEventRecord(copy_start));
     for (int i = 0; i < numStreams; ++i) {
         CHECK_CUDA_ERROR(cudaMemcpyAsync(d_a + i * segmentSize, h_a + i * segmentSize, segmentSize * sizeof(double), cudaMemcpyHostToDevice, streams[i]));
         CHECK_CUDA_ERROR(cudaMemcpyAsync(d_b + i * segmentSize, h_b + i * segmentSize, segmentSize * sizeof(double), cudaMemcpyHostToDevice, streams[i]));
     }
-    CHECK_CUDA_ERROR(cudaEventRecord(copy_stop));
     int threads = 128;
     int blocks = segmentSize / threads + 1;
-    CHECK_CUDA_ERROR(cudaEventRecord(t1));
     for (int i = 0; i < numStreams; ++i) {
         sumvec_d<<<blocks, threads, 0, streams[i]>>>(d_a + i * segmentSize, d_b + i * segmentSize, d_c + i * segmentSize, segmentSize);
     }
-    CHECK_CUDA_ERROR(cudaEventRecord(t2));
-    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     for (int i = 0; i < numStreams; ++i) {
         CHECK_CUDA_ERROR(cudaMemcpyAsync(h_c + i * segmentSize, d_c + i * segmentSize, segmentSize * sizeof(double), cudaMemcpyDeviceToHost, streams[i]));
     }
+    CHECK_CUDA_ERROR(cudaEventRecord(t2));
     float t_kernel = 0, t_copy = 0;
     CHECK_CUDA_ERROR(cudaEventElapsedTime(&t_kernel, t1, t2));  
-    // CHECK_CUDA_ERROR(cudaEventElapsedTime(&t_copy, copy_start, copy_stop)); 
-    // for (int i = 0 ; i < N;++i){
-    //     std::cout << h_c[i];
-    //     if (h_c[i] - 1.0 > 0.000000000001){
-    //         std::cout << "error" << std::endl;
-    //         break;
-    //     }
-    // }
     std::cout << "t_kernel: " << t_kernel << " ms" << std::endl;
-    std::cout << "t_copy: " << t_copy << " ms" << std::endl;
 
     for (int i = 0; i < numStreams; ++i) {
         CHECK_CUDA_ERROR(cudaStreamSynchronize(streams[i]));
@@ -106,11 +95,16 @@ int main(int argc, char** argv) {
     CHECK_CUDA_ERROR(cudaFree(d_a));
     CHECK_CUDA_ERROR(cudaFree(d_b));
     CHECK_CUDA_ERROR(cudaFree(d_c));
-
+    
+    CHECK_CUDA_ERROR(cudaFreeHost(h_a));
+    CHECK_CUDA_ERROR(cudaFreeHost(h_b));
+    CHECK_CUDA_ERROR(cudaFreeHost(h_c));
+	
     for (int i = 0; i < numStreams; ++i) {
         CHECK_CUDA_ERROR(cudaStreamDestroy(streams[i]));
     }
 
-    
+    CHECK_CUDA_ERROR(cudaFreeHost(streams));
+
     return 0;
 }
