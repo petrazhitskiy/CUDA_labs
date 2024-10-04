@@ -5,7 +5,10 @@
 #include <cstring>
 
 #define VECTOR_SIZE 10000000
-
+__host__ void vector_add(double* h_a, double* h_b, double* h_c, size_t N) {
+    for (size_t i = 0; i < N; ++i) 
+        h_c[i] = sin(h_a[i]) * sin(h_a[i]) + cos(h_b[i]) * cos(h_b[i]);
+}
 int main(int argc, char** argv) {
     size_t N;
     if (argc > 1)
@@ -29,8 +32,9 @@ int main(int argc, char** argv) {
     }
 
     auto start_host = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i) 
-        h_c[i] = sin(h_a[i])*sin(h_a[i]) + cos(h_b[i])*cos(h_b[i]);
+    vector_add(h_a, h_b, h_c, N);
+    //for (int i = 0; i < N; ++i) 
+    //    h_c[i] = sin(h_a[i])*sin(h_a[i]) + cos(h_b[i])*cos(h_b[i]);
 //    for (int i = 0; i < 10; ++i)
 //        std::cout << h_c[i] << " ";
 //    std::cout << std::endl;
